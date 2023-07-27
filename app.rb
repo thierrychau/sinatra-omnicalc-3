@@ -71,7 +71,7 @@ end
 
 post("/process_single_message") do
   @user_message = params.fetch("the_message")
-  @chatgpt_response = "test"
+  @chatgpt_response = ask_chatgpt(@user_message)
 
   erb(:message_results)
 end
@@ -89,4 +89,41 @@ end
 post("/clear_chat") do
 
   redirect :chat
+end
+
+
+# OPEN AI API REQUEST AND RESPONSE
+def ask_chatgpt(prompt)
+
+  request_headers_hash = {
+    "Authorization" => "Bearer #{ENV.fetch("OPENAI_KEY")}",
+    "content-type" => "application/json"
+  }
+
+  request_body_hash = {
+    "model" => "gpt-3.5-turbo",
+    "messages" => [
+      {
+        "role" => "system",
+        "content" => "You are a helpful assistant who talks like Shakespeare."
+      },
+      {
+        "role" => "user",
+        "content" => prompt
+      }
+    ]
+  }
+
+  request_body_json = JSON.generate(request_body_hash)
+
+  raw_response = HTTP.headers(request_headers_hash).post(
+    "https://api.openai.com/v1/chat/completions",
+    :body => request_body_json
+  ).to_s
+
+  parsed_response = JSON.parse(raw_response)
+  
+  chatgpt_response = parsed_response.dig("choices", 0, "message", "content")
+
+  return chatgpt_response
 end
