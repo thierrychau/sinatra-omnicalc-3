@@ -8,10 +8,7 @@ pirate_weather_key = ENV.fetch("PIRATE_WEATHER_KEY")
 openai_key = ENV.fetch("OPENAI_KEY")
 
 get("/") do
-  "
-  <h1>Welcome to your Sinatra App!</h1>
-  <p>Define some routes in app.rb</p>
-  "
+
   erb(:landing)
 end
 
@@ -65,4 +62,31 @@ post("/process_umbrella") do
   end
 
   erb(:umbrella_results)
+end
+
+get("/message") do
+ 
+  erb(:message_form)
+end
+
+post("/process_single_message") do
+  @user_message = params.fetch("the_message")
+  @chatgpt_response = "test"
+
+  erb(:message_results)
+end
+
+get("/chat") do
+
+  erb(:chat)
+end
+
+post("/add_message_to_chat") do
+
+  redirect :chat
+end
+
+post("/clear_chat") do
+
+  redirect :chat
 end
