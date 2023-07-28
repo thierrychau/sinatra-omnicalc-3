@@ -1,9 +1,11 @@
 <dl>
+<% cookies.fetch("counter").to_i.times do |counter| %>
   <dt>user</dt>
-  <dd>test</dd>
+  <dd><%= cookies.fetch("message_#{counter}") %></dd>
 
   <dt>assistant</dt>
-  <dd>Hello! How can I assist you today?</dd>
+  <dd><%= cookies.fetch("gpt_response_#{counter}") %></dd>
+<% end %>
 </dl>
 
 <form action="/add_message_to_chat" method="post">

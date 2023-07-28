@@ -2,6 +2,7 @@ require "sinatra"
 require "sinatra/reloader"
 require "sinatra/cookies"
 require "http"
+require "sinatra/cookies"
 
 gmaps_key = ENV.fetch("GMAPS_KEY")
 pirate_weather_key = ENV.fetch("PIRATE_WEATHER_KEY")
@@ -77,16 +78,27 @@ post("/process_single_message") do
 end
 
 get("/chat") do
+  if cookies.has_key?("counter") == false
+    cookies.store("counter", 0)
+  end
 
-  erb(:chat)
+  erb(:chat) 
 end
 
 post("/add_message_to_chat") do
+  counter = cookies.fetch("counter")
+
+  cookies.store("message_#{counter}", params.fetch("user_message"))
+  cookies.store("gpt_response_#{counter}", ask_chatgpt(params.fetch("user_message")))
+  cookies["counter"] = cookies["counter"].to_i + 1
 
   redirect :chat
 end
 
 post("/clear_chat") do
+  cookies.keys.each do |key|
+    cookies.delete(key)
+  end
 
   redirect :chat
 end
