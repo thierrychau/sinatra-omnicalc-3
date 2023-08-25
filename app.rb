@@ -25,20 +25,17 @@ class ChatGPT
     @model = model
   end
   
-  def add_system_message(content)
-    @messages << {:role => "system", :content => content}
-  end
-
-  def add_user_message(content)
-    @messages << {:role => "user", :content => content}
+  def add_message(role, content)
+    @messages << {:role => role, :content => content}
   end
 
   def get_response
     request_body_json = JSON.generate({"model" => @model, "messages" => @messages})
     raw_response = HTTP.headers(BASE_HEADER).post(BASE_URL, :body => request_body_json)
     parsed_response = JSON.parse(raw_response)
-    @messages << {:role => "assistant", :content => parsed_response.dig("choices", 0, "message", "content")}
-    return parsed_response.dig("choices", 0, "message", "content")
+    response_content = parsed_response.dig("choices", 0, "message", "content")
+    add_message("assistant", response_content)
+    return response_content
   end
 end
 
@@ -110,27 +107,38 @@ end
 
 post("/process_single_message") do
   @user_message = params.fetch("the_message")
-  @chatgpt_response = ask_chatgpt(@user_message)
-
+  
+  assistant = ChatGPT.new
+  assistant.add_system_message("You are a helpful assistant.")
+  assistant.add_user_message(@user_message)
+  @chatgpt_response = assistant.get_response
+  
   erb(:message_results)
 end
 
 get("/chat") do
-  if cookies.has_key?("counter") == false
-    cookies.store("counter", 0)
-  end
-
+  @chat_history = JSON.parse(cookies[:chat_history] || "[]")
+  
   erb(:chat) 
 end
 
 post("/add_message_to_chat") do
-  counter = cookies.fetch("counter")
+  @user_message = params.fetch("user_message")
 
-  cookies.store("message_#{counter}", params.fetch("user_message"))
-  cookies.store("gpt_response_#{counter}", ask_chatgpt(params.fetch("user_message")))
-  cookies["counter"] = cookies["counter"].to_i + 1
+  # create an array with all the previous chat history stored in the cookies ; empty array if no history
+  @chat_history = JSON.parse(cookies[:chat_history] || "[]")
+  @chat_history << {"role" => "user", "content" => @user_message }
 
   assistant = ChatGPT.new
+  assistant.add_system_message("You are a helpful assistant.")
+
+  @chat_history.each do |message|
+    assistant.add_message(message["role"], message["content"])
+  end
+
+  @chat_history << {"role" => "assistant", "content" => assistant.get_response}
+
+  cookies[:chat_history] = JSON.generate(@chat_history)
 
   redirect :chat
 end
@@ -141,15 +149,4 @@ post("/clear_chat") do
   end
 
   redirect :chat
-end
-
-
-# OPEN AI API REQUEST AND RESPONSE
-def ask_chatgpt(prompt)
-
-  assistant = ChatGPT.new
-  assistant.add_system_message("You are a helpful assistant.")
-  assistant.add_user_message(prompt)
-  return assistant.get_response
-
 end

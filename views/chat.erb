@@ -1,10 +1,9 @@
 <dl>
-<% cookies.fetch("counter").to_i.times do |counter| %>
-  <dt>user</dt>
-  <dd><%= cookies.fetch("message_#{counter}") %></dd>
-
-  <dt>assistant</dt>
-  <dd><%= cookies.fetch("gpt_response_#{counter}") %></dd>
+<% if @chat_history != nil %>
+  <% @chat_history.each do |message| %>
+    <dt><%= message["role"] %></dt>
+    <dd><%= message["content"] %></dd>
+  <% end %>
 <% end %>
 </dl>
 
