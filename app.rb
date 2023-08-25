@@ -117,8 +117,9 @@ post("/process_single_message") do
 end
 
 get("/chat") do
+  # create an array with all the previous chat history stored in the cookies ; empty array if no history
   @chat_history = JSON.parse(cookies[:chat_history] || "[]")
-  
+
   erb(:chat) 
 end
 
@@ -127,26 +128,28 @@ post("/add_message_to_chat") do
 
   # create an array with all the previous chat history stored in the cookies ; empty array if no history
   @chat_history = JSON.parse(cookies[:chat_history] || "[]")
+
+  # adding the new message to the chat history
   @chat_history << {"role" => "user", "content" => @user_message }
 
+  # creating a ChatGPT Class object and adding all the chat history to it
   assistant = ChatGPT.new
   assistant.add_system_message("You are a helpful assistant.")
-
   @chat_history.each do |message|
     assistant.add_message(message["role"], message["content"])
   end
 
+  # storing ChatGPT's response in the chat history
   @chat_history << {"role" => "assistant", "content" => assistant.get_response}
 
+  # storing the chat history in the cookies
   cookies[:chat_history] = JSON.generate(@chat_history)
 
   redirect :chat
 end
 
 post("/clear_chat") do
-  cookies.keys.each do |key|
-    cookies.delete(key)
-  end
+  cookies[:chat_history] = JSON.generate([])
 
   redirect :chat
 end
