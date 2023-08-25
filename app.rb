@@ -8,6 +8,44 @@ gmaps_key = ENV.fetch("GMAPS_KEY")
 pirate_weather_key = ENV.fetch("PIRATE_WEATHER_KEY")
 openai_key = ENV.fetch("OPENAI_KEY")
 
+class ChatGPT
+  BASE_HEADER = {
+    "Authorization" => "Bearer #{ENV.fetch("OPENAI_KEY")}",
+    "content-type" => "application/json"
+  }
+
+  BASE_URL = "https://api.openai.com/v1/chat/completions"
+
+  def initialize
+    @messages = []
+    @model = "gpt-3.5-turbo"
+  end
+
+  def change_model(model)
+    @model = model
+  end
+  
+  def add_system_message(content)
+    @messages << {:role => "system", :content => content}
+  end
+
+  def add_user_message(content)
+    @messages << {:role => "user", :content => content}
+  end
+
+  def get_response
+    request_body_json = JSON.generate({"model" => @model, "messages" => @messages})
+    raw_response = HTTP.headers(BASE_HEADER).post(BASE_URL, :body => request_body_json)
+    parsed_response = JSON.parse(raw_response)
+    @messages << {:role => "assistant", :content => parsed_response.dig("choices", 0, "message", "content")}
+    return parsed_response.dig("choices", 0, "message", "content")
+  end
+end
+
+=begin
+raw_response = HTTP.headers(request_headers_hash).post("https://api.openai.com/v1/chat/completions", :body => request_body_json).to_s
+=end
+
 get("/") do
 
   erb(:landing)
@@ -92,6 +130,8 @@ post("/add_message_to_chat") do
   cookies.store("gpt_response_#{counter}", ask_chatgpt(params.fetch("user_message")))
   cookies["counter"] = cookies["counter"].to_i + 1
 
+  assistant = ChatGPT.new
+
   redirect :chat
 end
 
@@ -107,35 +147,9 @@ end
 # OPEN AI API REQUEST AND RESPONSE
 def ask_chatgpt(prompt)
 
-  request_headers_hash = {
-    "Authorization" => "Bearer #{ENV.fetch("OPENAI_KEY")}",
-    "content-type" => "application/json"
-  }
+  assistant = ChatGPT.new
+  assistant.add_system_message("You are a helpful assistant.")
+  assistant.add_user_message(prompt)
+  return assistant.get_response
 
-  request_body_hash = {
-    "model" => "gpt-3.5-turbo",
-    "messages" => [
-      {
-        "role" => "system",
-        "content" => "You are a helpful assistant who talks like Shakespeare."
-      },
-      {
-        "role" => "user",
-        "content" => prompt
-      }
-    ]
-  }
-
-  request_body_json = JSON.generate(request_body_hash)
-
-  raw_response = HTTP.headers(request_headers_hash).post(
-    "https://api.openai.com/v1/chat/completions",
-    :body => request_body_json
-  ).to_s
-
-  parsed_response = JSON.parse(raw_response)
-  
-  chatgpt_response = parsed_response.dig("choices", 0, "message", "content")
-
-  return chatgpt_response
 end
