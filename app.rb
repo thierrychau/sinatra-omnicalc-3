@@ -109,8 +109,8 @@ post("/process_single_message") do
   @user_message = params.fetch("the_message")
   
   assistant = ChatGPT.new
-  assistant.add_system_message("You are a helpful assistant.")
-  assistant.add_user_message(@user_message)
+  assistant.add_message("system", "You are a helpful assistant.")
+  assistant.add_message("user", @user_message)
   @chatgpt_response = assistant.get_response
   
   erb(:message_results)
@@ -134,7 +134,7 @@ post("/add_message_to_chat") do
 
   # creating a ChatGPT Class object and adding all the chat history to it
   assistant = ChatGPT.new
-  assistant.add_system_message("You are a helpful assistant.")
+  assistant.add_message("system", "You are a helpful assistant.")
   @chat_history.each do |message|
     assistant.add_message(message["role"], message["content"])
   end
